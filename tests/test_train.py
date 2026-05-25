@@ -56,3 +56,16 @@ def test_get_xy_excludes_meta_columns(tmp_path):
     assert X.shape == (100, 41)
     assert len(y) == 100
     assert "genre" not in X.tolist()
+
+
+def test_train_with_pca(tmp_path):
+    from scripts.train import train_with_pca
+
+    df = make_dummy_df()
+    result = train_with_pca(df, n_components=10, models_dir=tmp_path)
+
+    assert "accuracy" in result
+    assert "f1_macro" in result
+    assert "explained_variance" in result
+    assert 0.0 < result["explained_variance"] <= 1.0
+    assert (tmp_path / "pca.pkl").exists()
