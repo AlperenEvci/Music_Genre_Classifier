@@ -1,4 +1,5 @@
 # scripts/utils.py
+import functools
 import numpy as np
 from pathlib import Path
 import librosa
@@ -23,10 +24,13 @@ DATA_DIR   = Path(__file__).parent.parent / "data"
 
 def genre_from_filename(filename: str) -> str:
     """'blues.00042.wav' → 'blues'"""
+    if not filename:
+        raise ValueError(f"Empty filename: {filename!r}")
     return Path(filename).stem.split(".")[0]
 
 
-def vector_labels() -> list[str]:
+@functools.lru_cache(maxsize=None)
+def vector_labels() -> tuple[str, ...]:
     """Öznitelik vektörünün sütun isimlerini döndürür. Toplam 41 eleman."""
     cols = []
     for i in range(N_MFCC):
@@ -41,7 +45,7 @@ def vector_labels() -> list[str]:
         "rms_mean", "rms_std",
         "contrast_mean", "contrast_std",
     ]
-    return cols  # 13×2=26 + 14 + 1 = 41
+    return tuple(cols)  # 13×2=26 + 15 = 41
 
 
 def scan_dataset(gtzan_root: Path) -> tuple[list[Path], list[str]]:
