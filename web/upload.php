@@ -1,0 +1,74 @@
+<?php
+// web/upload.php
+header('Content-Type: application/json; charset=utf-8');
+set_time_limit(120);
+
+$allowedExts  = ['wav', 'mp3'];
+$maxSizeBytes = 10 * 1024 * 1024;
+$uploadDir    = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'tmp' . DIRECTORY_SEPARATOR;
+
+// Python binary — Windows path, gerekirse düzenle
+// Eğer virtualenv varsa: proje_root/venv/Scripts/python.exe
+$pythonBin    = realpath(__DIR__ . '/../venv/Scripts/python.exe');
+if (!$pythonBin) {
+    $pythonBin = 'python'; // PATH'te python varsa
+}
+$predictScript = realpath(__DIR__ . '/../scripts/predict.py');
+
+function json_error(string $msg, int $code = 400): void {
+    http_response_code($code);
+    echo json_encode(['error' => $msg, 'genre' => null, 'confidence' => 0.0, 'recommendations' => []]);
+    exit;
+}
+
+if (!isset($_FILES['audioFile']) || $_FILES['audioFile']['error'] !== UPLOAD_ERR_OK) {
+    json_error('Dosya yüklenemedi.', 400);
+}
+
+$file = $_FILES['audioFile'];
+$ext  = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+if (!in_array($ext, $allowedExts, true)) {
+    json_error('Geçersiz dosya uzantısı. Yalnızca .wav veya .mp3 kabul edilir.', 422);
+}
+
+if ($file['size'] > $maxSizeBytes) {
+    json_error('Dosya çok büyük. Maksimum 10 MB.', 422);
+}
+
+// MIME type ek kontrol
+$mimeType = mime_content_type($file['tmp_name']);
+$allowedMimes = ['audio/wav', 'audio/x-wav', 'audio/mpeg', 'audio/mp3', 'application/octet-stream'];
+if (!in_array($mimeType, $allowedMimes, true)) {
+    // Soft check — MIME tespiti güvenilmez, sadece log
+    error_log("Beklenmeyen MIME: $mimeType for file: " . $file['name']);
+}
+
+$tmpFile = $uploadDir . bin2hex(random_bytes(8)) . '.' . $ext;
+
+if (!move_uploaded_file($file['tmp_name'], $tmpFile)) {
+    json_error('Dosya kaydedilemedi.', 500);
+}
+
+if (!$predictScript) {
+    @unlink($tmpFile);
+    json_error('predict.py scripti bulunamadı.', 500);
+}
+
+$cmd    = escapeshellarg($pythonBin) . ' ' . escapeshellarg($predictScript) . ' ' . escapeshellarg($tmpFile) . ' 2>&1';
+$output = shell_exec($cmd);
+
+@unlink($tmpFile);
+
+if ($output === null) {
+    json_error('Python scripti çalıştırılamadı. shell_exec devre dışı olabilir.', 500);
+}
+
+$output = trim($output);
+$data   = json_decode($output, true);
+
+if ($data === null) {
+    json_error('Python çıktısı parse edilemedi: ' . mb_substr($output, 0, 300), 500);
+}
+
+echo json_encode($data, JSON_UNESCAPED_UNICODE);
