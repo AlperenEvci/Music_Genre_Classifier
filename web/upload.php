@@ -55,6 +55,28 @@ if (!$predictScript) {
     json_error('predict.py scripti bulunamadı.', 500);
 }
 
+/*
+ * PLAN C — Flask API (shell_exec çalışmazsa bu bloğu kullan, aşağıdaki shell_exec bloğunu kaldır)
+ *
+ * $ch = curl_init('http://127.0.0.1:5000/predict');
+ * curl_setopt_array($ch, [
+ *     CURLOPT_POST           => true,
+ *     CURLOPT_POSTFIELDS     => ['audio' => new CURLFile($tmpFile)],
+ *     CURLOPT_RETURNTRANSFER => true,
+ *     CURLOPT_TIMEOUT        => 60,
+ * ]);
+ * $output = curl_exec($ch);
+ * $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+ * curl_close($ch);
+ * @unlink($tmpFile);
+ * if ($httpCode !== 200) {
+ *     json_error('Flask API hatası', 500);
+ * }
+ * $data = json_decode($output, true);
+ * echo json_encode($data, JSON_UNESCAPED_UNICODE);
+ * exit;
+ */
+
 $cmd    = escapeshellarg($pythonBin) . ' ' . escapeshellarg($predictScript) . ' ' . escapeshellarg($tmpFile) . ' 2>&1';
 $output = shell_exec($cmd);
 
