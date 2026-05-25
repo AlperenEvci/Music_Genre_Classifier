@@ -57,6 +57,8 @@ def scan_dataset(gtzan_root: Path) -> tuple[list[Path], list[str]]:
     skipped: list[str] = []
 
     genres_dir = gtzan_root / "genres"
+    if not genres_dir.exists():
+        return [], []
     for wav_path in sorted(genres_dir.rglob("*.wav")):
         try:
             info = librosa.get_samplerate(str(wav_path))
