@@ -36,12 +36,12 @@ if ($file['size'] > $maxSizeBytes) {
     json_error('Dosya çok büyük. Maksimum 10 MB.', 422);
 }
 
-// MIME type ek kontrol
+// MIME type ek kontrol — hard block
 $mimeType = mime_content_type($file['tmp_name']);
-$allowedMimes = ['audio/wav', 'audio/x-wav', 'audio/mpeg', 'audio/mp3', 'application/octet-stream'];
+$allowedMimes = ['audio/wav', 'audio/x-wav', 'audio/mpeg', 'audio/mp3'];
 if (!in_array($mimeType, $allowedMimes, true)) {
-    // Soft check — MIME tespiti güvenilmez, sadece log
-    error_log("Beklenmeyen MIME: $mimeType for file: " . $file['name']);
+    @unlink($tmpFile);
+    json_error('Geçersiz dosya türü.', 422);
 }
 
 $tmpFile = $uploadDir . bin2hex(random_bytes(8)) . '.' . $ext;
@@ -68,7 +68,8 @@ $output = trim($output);
 $data   = json_decode($output, true);
 
 if ($data === null) {
-    json_error('Python çıktısı parse edilemedi: ' . mb_substr($output, 0, 300), 500);
+    error_log('Python parse error: ' . $output);
+    json_error('Ses dosyası işlenirken bir hata oluştu.', 500);
 }
 
 echo json_encode($data, JSON_UNESCAPED_UNICODE);
