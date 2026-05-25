@@ -40,7 +40,7 @@ def extract_features_from_file(file_path: str) -> np.ndarray:
 
     # Tempo: 1
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr, hop_length=HOP_LENGTH)
-    tempo_feat = np.array([float(tempo)])
+    tempo_feat = np.array([float(np.squeeze(tempo))])
 
     # Spectral Rolloff: 2
     rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr, hop_length=HOP_LENGTH)

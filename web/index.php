@@ -1,6 +1,6 @@
 <?php
 // web/index.php
-$maxSizeMB   = 10;
+$maxSizeMB   = 50;
 $allowedExts = ['wav', 'mp3'];
 ?>
 <!DOCTYPE html>

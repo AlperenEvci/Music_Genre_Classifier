@@ -10,6 +10,12 @@ import numpy as np
 import joblib
 from pathlib import Path
 from scipy.spatial.distance import cosine
+
+# PHP'den shell_exec ile çağrıldığında sys.path düzelt
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 from scripts.utils import MODELS_DIR
 from scripts.extract_features import extract_features_from_file
 

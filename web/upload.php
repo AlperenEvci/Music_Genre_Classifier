@@ -33,7 +33,7 @@ if (!in_array($ext, $allowedExts, true)) {
 }
 
 if ($file['size'] > $maxSizeBytes) {
-    json_error('Dosya çok büyük. Maksimum 10 MB.', 422);
+    json_error('Dosya çok büyük. Maksimum 50 MB.', 422);
 }
 
 // MIME type ek kontrol — hard block
