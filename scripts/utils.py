@@ -32,9 +32,8 @@ def genre_from_filename(filename: str) -> str:
 @functools.lru_cache(maxsize=None)
 def vector_labels() -> tuple[str, ...]:
     """Öznitelik vektörünün sütun isimlerini döndürür. Toplam 41 eleman."""
-    cols = []
-    for i in range(N_MFCC):
-        cols += [f"mfcc_{i}_mean", f"mfcc_{i}_std"]
+    cols  = [f"mfcc_{i}_mean" for i in range(N_MFCC)]
+    cols += [f"mfcc_{i}_std"  for i in range(N_MFCC)]
     cols += [
         "sc_mean", "sc_std",
         "zcr_mean", "zcr_std",

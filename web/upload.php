@@ -40,7 +40,7 @@ if ($file['size'] > $maxSizeBytes) {
 $mimeType = mime_content_type($file['tmp_name']);
 $allowedMimes = ['audio/wav', 'audio/x-wav', 'audio/mpeg', 'audio/mp3'];
 if (!in_array($mimeType, $allowedMimes, true)) {
-    @unlink($tmpFile);
+    // $file['tmp_name'] PHP tarafından otomatik temizlenir
     json_error('Geçersiz dosya türü.', 422);
 }
 

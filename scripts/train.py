@@ -102,7 +102,10 @@ def train_with_pca(
     models_dir: Path = MODELS_DIR,
 ) -> dict:
     """
-    PCA ile boyut indirgeme yaparak RF eğit; scaler+pca kaydet.
+    PCA ile boyut indirgeme yaparak RF eğit; pca_analysis.pkl kaydeder.
+    UYARI: Bu fonksiyon YALNIZCA akademik karşılaştırma içindir.
+    Üretim tahmini için predict.py kullanın (train_classifier modelini kullanır).
+    PCA-scaler ve PCA-model kaydedilmez — predict pipeline ile uyumsuz.
     Returns: {"accuracy": float, "f1_macro": float, "explained_variance": float}
     """
     models_dir = Path(models_dir)
@@ -126,7 +129,7 @@ def train_with_pca(
     acc = float(accuracy_score(y_test, y_pred))
     f1  = float(f1_score(y_test, y_pred, average="macro", zero_division=0))
 
-    joblib.dump(pca, models_dir / "pca.pkl")
+    joblib.dump(pca, models_dir / "pca_analysis.pkl")
     print(f"PCA ({n_components} bileşen): accuracy={acc:.3f}, F1={f1:.3f}")
     print(f"Açıklanan varyans: {pca.explained_variance_ratio_.sum():.3f}")
 

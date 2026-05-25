@@ -68,4 +68,4 @@ def test_train_with_pca(tmp_path):
     assert "f1_macro" in result
     assert "explained_variance" in result
     assert 0.0 < result["explained_variance"] <= 1.0
-    assert (tmp_path / "pca.pkl").exists()
+    assert (tmp_path / "pca_analysis.pkl").exists()

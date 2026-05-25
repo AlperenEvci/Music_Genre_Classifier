@@ -10,6 +10,30 @@ from pathlib import Path
 from flask import Flask, request, jsonify
 from scripts.predict import predict_file
 
+# stdlib magic bytes kontrolü — python-magic bağımlılığı gerektirmez
+AUDIO_MAGIC_BYTES = {
+    b'RIFF': 'audio/wav',       # WAV
+    b'\xff\xfb': 'audio/mpeg',  # MP3
+    b'\xff\xf3': 'audio/mpeg',  # MP3
+    b'\xff\xf2': 'audio/mpeg',  # MP3
+    b'ID3\x02': 'audio/mpeg',   # MP3 ID3v2.2
+    b'ID3\x03': 'audio/mpeg',   # MP3 ID3v2.3
+    b'ID3\x04': 'audio/mpeg',   # MP3 ID3v2.4
+}
+
+
+def _check_audio_magic(file_path: str) -> bool:
+    """İlk 4 byte ile ses dosyası magic number kontrolü."""
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(4)
+        for magic in AUDIO_MAGIC_BYTES:
+            if header.startswith(magic):
+                return True
+        return False
+    except OSError:
+        return False
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
 
@@ -55,6 +79,17 @@ def predict():
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             audio_file.save(tmp.name)
             tmp_path = tmp.name
+
+        # Magic byte kontrolü — uzantı sahteciliğini engeller
+        if not _check_audio_magic(tmp_path):
+            os.unlink(tmp_path)
+            tmp_path = None
+            return jsonify({
+                'error': 'Geçersiz ses dosyası',
+                'genre': None,
+                'confidence': 0.0,
+                'recommendations': []
+            }), 422
 
         result = predict_file(tmp_path)
     finally:
