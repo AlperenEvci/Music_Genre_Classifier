@@ -4,7 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 set_time_limit(120);
 
 $allowedExts  = ['wav', 'mp3'];
-$maxSizeBytes = 10 * 1024 * 1024;
+$maxSizeBytes = 100 * 1024 * 1024;
 $uploadDir    = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'tmp' . DIRECTORY_SEPARATOR;
 
 // Python binary — Windows path, gerekirse düzenle
@@ -33,7 +33,7 @@ if (!in_array($ext, $allowedExts, true)) {
 }
 
 if ($file['size'] > $maxSizeBytes) {
-    json_error('Dosya çok büyük. Maksimum 50 MB.', 422);
+    json_error('Dosya çok büyük. Maksimum 100 MB.', 422);
 }
 
 // MIME type ek kontrol — hard block

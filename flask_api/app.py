@@ -36,7 +36,7 @@ def _check_audio_magic(file_path: str) -> bool:
         return False
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB
 
 
 @app.route('/predict', methods=['POST'])
