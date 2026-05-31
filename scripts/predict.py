@@ -8,6 +8,7 @@ import sys
 import json
 import numpy as np
 import joblib
+import librosa
 from pathlib import Path
 from scipy.spatial.distance import cosine
 
@@ -16,11 +17,15 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from scripts.utils import MODELS_DIR
+from scripts.utils import MODELS_DIR, SAMPLE_RATE
 from scripts.extract_features import extract_features_from_file
 
 _TEMPO_IDX = 32
 _ZCR_MEAN_IDX = 28
+_SC_MEAN_IDX = 26
+_RMS_MEAN_IDX = 37
+_ROLLOFF_MEAN_IDX = 33
+_CHROMA_MEAN_IDX = 30
 
 
 def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -67,11 +72,54 @@ def predict_file(
     genre = model.predict(features_scaled.reshape(1, -1))[0]
     proba = model.predict_proba(features_scaled.reshape(1, -1))[0]
     confidence = float(proba.max())
+    
+    # --- Explainable AI (XAI) Logic ---
+    classes = model.classes_
+    sorted_indices = np.argsort(proba)[::-1]
+    top1_idx = sorted_indices[0]
+    top2_idx = sorted_indices[1]
+    top1_genre = classes[top1_idx]
+    top1_prob = proba[top1_idx]
+    top2_genre = classes[top2_idx]
+    top2_prob = proba[top2_idx]
+    
+    feature_names = {
+        _TEMPO_IDX: "Tempo (Hız)",
+        _ZCR_MEAN_IDX: "Pürüzlülük (Metalik Tını)",
+        _SC_MEAN_IDX: "Parlaklık (Tiz Yoğunluğu)",
+        _RMS_MEAN_IDX: "Ses Şiddeti (Enerji)",
+        _ROLLOFF_MEAN_IDX: "Frekans Yuvarlaması",
+        _CHROMA_MEAN_IDX: "Harmonik Yapı"
+    }
+    
+    max_z_idx = max(feature_names.keys(), key=lambda k: abs(features_scaled[k]))
+    max_z_val = features_scaled[max_z_idx]
+    dom_feature = feature_names[max_z_idx]
+    
+    if max_z_val > 1.2:
+        durum = "ortalamanın çok üzerinde"
+    elif max_z_val > 0.5:
+        durum = "ortalamanın üzerinde"
+    elif max_z_val < -1.2:
+        durum = "ortalamanın çok altında"
+    elif max_z_val < -0.5:
+        durum = "ortalamanın altında"
+    else:
+        durum = "standart değerlere yakın"
+        
+    explanation = (f"Analiz edilen ses dosyasının <strong>{dom_feature}</strong> seviyesi {durum} olduğu için, "
+                   f"sistem <strong>%{top1_prob*100:.1f}</strong> ihtimalle <strong>{top1_genre.upper()}</strong> olduğuna karar vermiştir.")
+    
+    if top2_prob > 0.05:
+        explanation += f" Ancak diğer akustik özelliklerdeki sinyaller nedeniyle <strong>%{top2_prob*100:.1f}</strong> ihtimalle <strong>{top2_genre.upper()}</strong> olabileceği de değerlendirilmiştir."
+    # ---------------------------------
+
+    feat_db_scaled = scaler.transform(feat_db)
 
     sims = []
-    for i, db_vec in enumerate(feat_db):
+    for i, db_vec_scaled in enumerate(feat_db_scaled):
         try:
-            sim = _cosine_similarity(features, db_vec.astype(np.float32))
+            sim = _cosine_similarity(features_scaled, db_vec_scaled.astype(np.float32))
             sims.append({
                 "idx": i,
                 "score": sim,
@@ -94,7 +142,12 @@ def predict_file(
         "features": {
             "tempo":    round(float(features[_TEMPO_IDX]), 2),
             "zcr_mean": round(float(features[_ZCR_MEAN_IDX]), 6),
+            "sc_mean":  round(float(features[_SC_MEAN_IDX]), 2),
+            "rms_mean": round(float(features[_RMS_MEAN_IDX]), 6),
+            "rolloff_mean": round(float(features[_ROLLOFF_MEAN_IDX]), 2),
+            "chroma_mean": round(float(features[_CHROMA_MEAN_IDX]), 6)
         },
+        "explanation": explanation,
         "error": None,
     }
 

@@ -10,3 +10,5 @@ build/
 models/*.pkl
 models/*.joblib
 data/gtzan/
+.venv/
+venv/
