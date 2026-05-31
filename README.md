@@ -1,134 +1,91 @@
-# Müzik Türü Sınıflandırma ve Öneri Sistemi
+# Profesyonel Müzik Türü Sınıflandırma ve Analiz Sistemi
 
-Pattern Recognition dersi projesi. GTZAN veri seti üzerinde akustik öznitelik çıkarımı ile 10 müzik türünü sınıflandıran ve cosine similarity tabanlı içerik öneri sistemi sunan web uygulaması.
+Bu proje, bir ses dosyasının akustik özelliklerini çıkararak **Makine Öğrenmesi (Random Forest)** algoritmalarıyla müzik türünü tahmin eden ve benzer şarkılar öneren modern bir web uygulamasıdır.
 
-**Ekip:** 3 kişi | **Süre:** 5 hafta | **Ders:** Örüntü Tanıma
-
----
-
-## Sistem Mimarisi
-
-```
-[Tarayıcı] → [PHP: upload.php] → [Python: predict.py] → [JSON] → [PHP: render] → [Tarayıcı]
-```
-
-- **Python Pipeline:** librosa → 41 boyutlu öznitelik vektörü → scikit-learn RF sınıflandırıcı → cosine similarity öneri
-- **Web Katmanı:** PHP 8.1 + Bootstrap 5 + Vanilla JS (AJAX)
-- **Fallback:** Flask REST API (shell_exec çalışmazsa)
+Uygulama son güncellemelerle birlikte; **Kural Tabanlı XAI (Karar Özeti)**, **Radar Grafikleri**, **Şarkı Dinleme (Playback)** ve **Glassmorphism UI** ile tam teşekküllü bir portfolyo / veri bilimi projesine dönüştürülmüştür.
 
 ---
 
-## Kurulum
+## 🏗️ Sistem Mimarisi (Ayrık Yapı)
 
-### 1. Python Ortamı
+Sistem profesyonel bir ayrık (decoupled) mimari kullanır:
+1. **Frontend (Önyüz):** PHP 8.1 ve Vanilla JS (Docker Container içinde çalışır). Müzik yükleme, arayüz yönetimi ve veri görselleştirme (Chart.js) işlemlerini yapar.
+2. **Backend (Yapay Zeka):** Python Flask REST API (Makinenizde Local olarak çalışır). Model tahmini, Kosinüs Benzerliği ve XAI açıklamalarını üretir.
+
+```text
+[Kullanıcı / Tarayıcı] → (Port 8080) → [PHP Docker Container] → (cURL) → [Python Flask API] → (Tahmin & JSON)
+```
+
+---
+
+## 🚀 Hızlı Kurulum Rehberi
+
+Projeyi başka bir bilgisayarda sıfırdan çalıştırmak için aşağıdaki adımları sırasıyla uygulayın.
+
+### Adım 1: Python Yapay Zeka Sunucusunu Kurmak
+Sistemdeki tüm matematiksel hesaplamaları Python yapacaktır.
 
 ```bash
-python -m venv venv
-venv\Scripts\activate      # Windows
-# source venv/bin/activate  # Linux/Mac
+# 1. Proje dizinine gidin
+cd Music_Genre_Classifier
+
+# 2. Sanal ortam (Virtual Environment) oluşturun
+python -m venv .venv
+
+# 3. Sanal ortamı aktif edin
+.venv\Scripts\activate      # Windows için
+# source .venv/bin/activate  # Mac/Linux için
+
+# 4. Gerekli kütüphaneleri yükleyin
 pip install -r requirements.txt
-```
 
-### 2. GTZAN Veri Seti
-
-Kaggle'dan indirin: https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification
-
-`data/gtzan/genres/` altına yerleştirin:
-```
-data/gtzan/genres/blues/blues.00000.wav
-data/gtzan/genres/jazz/jazz.00000.wav
-...
-```
-
-### 3. Eğitim Pipeline (sırayla çalıştır)
-
-```bash
-# Adım 1: Öznitelik çıkarımı (~10 dk, 1000 dosya)
-python scripts/extract_features.py
-# Çıktı: data/features.csv
-
-# Adım 2: Model eğitimi
+# 5. Yapay Zeka Modelini Eğitin (Kısa sürer)
+# Bu işlem GitHub'dan gelen features.csv dosyasını kullanarak model.pkl ve scaler.pkl dosyalarını oluşturur.
 python scripts/train.py
-# Çıktı: models/model.pkl, models/scaler.pkl, models/feature_db.npy
+
+# 6. Flask API sunucusunu başlatın
+python -m flask_api.app
 ```
+*(Sunucu `http://0.0.0.0:5000` adresinde çalışmaya başlayacak ve arkada açık kalmalıdır).*
 
-### 4. Web Arayüzü (XAMPP)
+### Adım 2: Veri Setini (Şarkıları) Yüklemek
+Önerilen şarkıları dinleyebilmek için orijinal ses dosyalarına ihtiyacınız var:
+1. Kaggle'dan [GTZAN Veri Setini (1.2 GB)](https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification) indirin.
+2. Dosyaları şu dizine yerleştirin: `data/gtzan/genres/`
+*(Örnek tam yol: `data/gtzan/genres/blues/blues.00000.wav`)*
 
-1. XAMPP kur, Apache başlat
-2. `web/` → `C:\xampp\htdocs\muzik-sinif\` kopyala
-3. `web/upload.php` içindeki `$pythonBin` yolunu kontrol et:
-   ```php
-   $pythonBin = realpath(__DIR__ . '/../venv/Scripts/python.exe');
-   ```
-4. `http://localhost/muzik-sinif/` aç
+### Adım 3: Web Arayüzünü Docker ile Çalıştırmak
+Bilgisayarınıza XAMPP vb. kurmanıza gerek kalmadan arayüzü doğrudan Docker ile ayağa kaldırabilirsiniz.
 
-### 5. Flask Fallback (opsiyonel — shell_exec çalışmazsa)
-
+Yeni bir terminal açın ve şu komutu çalıştırın:
 ```bash
-python flask_api/app.py   # http://localhost:5000
+docker run -d -p 8080:80 --name music_web -v "%cd%\web":/var/www/html php:8.1-apache
+# Mac/Linux için "%cd%" yerine "$PWD" kullanın.
 ```
-
-`web/upload.php` içindeki Plan C yorumunu uncomment et.
-
----
-
-## Test
-
-```bash
-# Birim testler
-python -m pytest tests/ -v --ignore=tests/test_integration.py
-
-# Entegrasyon testleri (GTZAN + eğitilmiş model gerekli)
-python -m pytest tests/test_integration.py -v -m integration
-```
+*(Bu komut `web` klasörünüzü sanal bir Apache sunucusuna bağlar ve `http://localhost:8080` adresinden yayına açar).*
 
 ---
 
-## Öznitelik Vektörü (41 boyut)
+## 🧠 Yeni Özellikler Neler?
 
-| Öznitelik | Boyut | Açıklama |
-|---|---|---|
-| MFCC (mean+std) | 26 | Mel-frekans kepstral katsayıları |
-| Spectral Centroid | 2 | Spektrum ağırlık merkezi |
-| Zero Crossing Rate | 2 | Sıfır geçiş hızı |
-| Chroma | 2 | 12 yarım ton enerji dağılımı |
-| Tempo | 1 | BPM tahmini |
-| Spectral Rolloff | 2 | %85 enerji sınır frekansı |
-| Spectral Bandwidth | 2 | Spektral yayılım genişliği |
-| RMS Energy | 2 | Ortalama sinyal enerjisi |
-| Spectral Contrast | 2 | Band tepe-çukur enerji farkı |
+* **Kural Tabanlı XAI (Açıklanabilir Yapay Zeka):** Model artık sadece "Bu Rock" demekle kalmıyor; *Z-Score* ve *StandardScaler* kullanarak şarkının ortalamadan sapan en belirgin özelliklerini matematiksel olarak tespit edip Türkçe bir karar özeti üretiyor.
+* **Akustik Karakteristik Radar Grafiği:** Tempo, Parlaklık, Enerji, Pürüzlülük ve Harmonik Yapı özellikleri `Chart.js` ile örümcek ağı grafiğinde görselleştirildi.
+* **Benzer Şarkı Dinleme (Playback):** Kosinüs benzerliği (Cosine Similarity) formülü hatalı hesaplamalara karşı düzeltildi. Çıkan en benzer 3 şarkı artık doğrudan web arayüzündeki `Play` butonlarına basılarak dinlenebilir.
+* **Modern UI:** "Glassmorphism" (Buzlu cam) tasarımı, sürükle-bırak desteği ve dinamik animasyonlarla donatıldı.
 
 ---
 
-## Beklenen Model Doğruluğu (GTZAN)
-
-| Model | CV Accuracy | Test Accuracy |
-|---|---|---|
-| Random Forest | ~%78 | ~%80 |
-| K-NN | ~%68 | ~%70 |
-| Decision Tree | ~%58 | ~%61 |
-
----
-
-## Dizin Yapısı
+## 📂 Dizin Yapısı
 
 ```
-proje/
-├── scripts/          # Python ML pipeline
-├── web/              # PHP + Bootstrap5 arayüz
-├── flask_api/        # Flask fallback API
-├── tests/            # pytest testleri
-├── models/           # Eğitilmiş modeller (git-ignored)
-├── data/             # GTZAN + features.csv (git-ignored)
-└── requirements.txt
+Music_Genre_Classifier/
+├── data/             # GTZAN klasörü ve features.csv burada yer alır.
+├── flask_api/        # Yapay zekayı dışa açan Flask Web Sunucusu
+├── models/           # Eğitilmiş Model (model.pkl, scaler.pkl, feature_db.npy)
+├── scripts/          # Model Eğitimi (train.py) ve Tahmin Algoritmaları (predict.py)
+├── web/              # PHP, JS ve CSS'den oluşan Modern Arayüz (Docker volume)
+├── requirements.txt  # Gerekli Python kütüphaneleri listesi
+└── README.md
 ```
 
----
-
-## Akademik Sorular
-
-**MFCC nasıl hesaplanır?**
-Ham ses → Pre-emphasis → Framing + Windowing → FFT → Mel Filterbank → Log → DCT → MFCC katsayıları.
-
-**Neden Cosine Similarity, Euclidean değil?**
-Cosine similarity vektör büyüklüğünden bağımsız olarak yönleri karşılaştırır. Normalize edilmemiş öznitelik vektörlerinde magnitude farkı benzerlik skorunu bozar; cosine bu etkiyi ortadan kaldırır.
+Tebrikler! Sistem kullanıma hazır. Tarayıcınızdan `http://localhost:8080` adresine girerek test edebilirsiniz.

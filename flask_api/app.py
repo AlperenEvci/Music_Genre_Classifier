@@ -7,8 +7,9 @@ Endpoint: POST http://127.0.0.1:5000/predict
 import os
 import tempfile
 from pathlib import Path
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from scripts.predict import predict_file
+from scripts.utils import DATA_DIR
 
 # stdlib magic bytes kontrolü — python-magic bağımlılığı gerektirmez
 AUDIO_MAGIC_BYTES = {
@@ -105,5 +106,12 @@ def health():
     return jsonify({'status': 'ok'})
 
 
+@app.route('/audio/<genre>/<filename>', methods=['GET'])
+def serve_audio(genre, filename):
+    """Serve original audio files from GTZAN dataset for playback."""
+    audio_dir = DATA_DIR / "gtzan" / "genres" / genre
+    return send_from_directory(audio_dir, filename)
+
+
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)

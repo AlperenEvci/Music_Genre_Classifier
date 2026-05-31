@@ -50,37 +50,34 @@ if (!move_uploaded_file($file['tmp_name'], $tmpFile)) {
     json_error('Dosya kaydedilemedi.', 500);
 }
 
-if (!$predictScript) {
-    @unlink($tmpFile);
-    json_error('predict.py scripti bulunamadı.', 500);
-}
+// if (!$predictScript) {
+//     @unlink($tmpFile);
+//     json_error('predict.py scripti bulunamadı.', 500);
+// }
 
-/*
- * PLAN C — Flask API (shell_exec çalışmazsa bu bloğu kullan, aşağıdaki shell_exec bloğunu kaldır)
- *
- * $ch = curl_init('http://127.0.0.1:5000/predict');
- * curl_setopt_array($ch, [
- *     CURLOPT_POST           => true,
- *     CURLOPT_POSTFIELDS     => ['audio' => new CURLFile($tmpFile)],
- *     CURLOPT_RETURNTRANSFER => true,
- *     CURLOPT_TIMEOUT        => 60,
- * ]);
- * $output = curl_exec($ch);
- * $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
- * curl_close($ch);
- * @unlink($tmpFile);
- * if ($httpCode !== 200) {
- *     json_error('Flask API hatası', 500);
- * }
- * $data = json_decode($output, true);
- * echo json_encode($data, JSON_UNESCAPED_UNICODE);
- * exit;
- */
-
-$cmd    = escapeshellarg($pythonBin) . ' ' . escapeshellarg($predictScript) . ' ' . escapeshellarg($tmpFile) . ' 2>&1';
-$output = shell_exec($cmd);
-
+// PLAN C — Flask API (Docker içinden host'a erişim için host.docker.internal kullanıyoruz)
+$ch = curl_init('http://host.docker.internal:5000/predict');
+curl_setopt_array($ch, [
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => ['audio' => new CURLFile($tmpFile)],
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT        => 60,
+]);
+$output = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
 @unlink($tmpFile);
+if ($httpCode !== 200) {
+    json_error('Flask API hatası', 500);
+}
+$data = json_decode($output, true);
+echo json_encode($data, JSON_UNESCAPED_UNICODE);
+exit;
+
+// $cmd    = escapeshellarg($pythonBin) . ' ' . escapeshellarg($predictScript) . ' ' . escapeshellarg($tmpFile) . ' 2>&1';
+// $output = shell_exec($cmd);
+// 
+// @unlink($tmpFile);
 
 if ($output === null) {
     json_error('Python scripti çalıştırılamadı. shell_exec devre dışı olabilir.', 500);
